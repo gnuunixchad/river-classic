@@ -46,7 +46,7 @@ pub fn build(b: *Build) !void {
         bool,
         "fish-completion",
         "Set to true to install fish completion for riverctl. Defaults to true.",
-    ) orelse true;
+    ) orelse false;
 
     const xwayland = b.option(
         bool,
@@ -205,29 +205,6 @@ pub fn build(b: *Build) !void {
         riverctl.root_module.omit_frame_pointer = omit_frame_pointer;
 
         b.installArtifact(riverctl);
-    }
-
-    {
-        const rivertile = b.addExecutable(.{
-            .name = "rivertile",
-            .root_module = b.createModule(.{
-                .root_source_file = b.path("rivertile/main.zig"),
-                .target = target,
-                .optimize = optimize,
-                .strip = strip,
-            }),
-        });
-        rivertile.root_module.addOptions("build_options", options);
-
-        rivertile.root_module.addImport("flags", flags);
-        rivertile.root_module.addImport("wayland", wayland);
-        rivertile.linkLibC();
-        rivertile.linkSystemLibrary("wayland-client");
-
-        rivertile.pie = pie;
-        rivertile.root_module.omit_frame_pointer = omit_frame_pointer;
-
-        b.installArtifact(rivertile);
     }
 
     {
