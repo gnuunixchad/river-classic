@@ -208,6 +208,29 @@ pub fn build(b: *Build) !void {
     }
 
     {
+        const rivercarro = b.addExecutable(.{
+            .name = "rivercarro",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("rivercarro/main.zig"),
+                .target = target,
+                .optimize = optimize,
+                .strip = strip,
+            }),
+        });
+        rivercarro.root_module.addOptions("build_options", options);
+
+        rivercarro.root_module.addImport("flags", flags);
+        rivercarro.root_module.addImport("wayland", wayland);
+        rivercarro.linkLibC();
+        rivercarro.linkSystemLibrary("wayland-client");
+
+        rivercarro.pie = pie;
+        rivercarro.root_module.omit_frame_pointer = omit_frame_pointer;
+
+        b.installArtifact(rivercarro);
+    }
+
+    {
         const wf = Build.Step.WriteFile.create(b);
         const pc_file = wf.add("river-protocols.pc", b.fmt(
             \\prefix={s}
@@ -223,17 +246,21 @@ pub fn build(b: *Build) !void {
         b.installFile("protocol/river-layout-v3.xml", "share/river-protocols/river-layout-v3.xml");
         b.getInstallStep().dependOn(&b.addInstallFile(pc_file, "share/pkgconfig/river-protocols.pc").step);
     }
-
     if (man_pages) {
-        inline for (.{ "river", "riverctl", "rivertile" }) |page| {
-            // Workaround for https://github.com/ziglang/zig/issues/16369
-            // Even passing a buffer to std.Build.Step.Run appears to be racy and occasionally deadlocks.
-            const scdoc = b.addSystemCommand(&.{ "/bin/sh", "-c", "scdoc < doc/" ++ page ++ ".1.scd" });
-            // This makes the caching work for the Workaround, and the extra argument is ignored by /bin/sh.
-            scdoc.addFileArg(b.path("doc/" ++ page ++ ".1.scd"));
+        inline for (.{ "river", "riverctl", "rivercarro" }) |page| {
+            if (mem.eql(u8, page, "rivercarro")) {
+                // doesn't need to compile the manpage for rivercarro
+                b.installFile("doc/rivercarro.1", "share/man/man1/rivercarro.1");
+            } else {
+                // Workaround for https://github.com/ziglang/zig/issues/16369
+                // Even passing a buffer to std.Build.Step.Run appears to be racy and occasionally deadlocks.
+                const scdoc = b.addSystemCommand(&.{ "/bin/sh", "-c", "scdoc < doc/" ++ page ++ ".1.scd" });
+                // This makes the caching work for the Workaround, and the extra argument is ignored by /bin/sh.
+                scdoc.addFileArg(b.path("doc/" ++ page ++ ".1.scd"));
 
-            const stdout = scdoc.captureStdOut();
-            b.getInstallStep().dependOn(&b.addInstallFile(stdout, "share/man/man1/" ++ page ++ ".1").step);
+                const stdout = scdoc.captureStdOut();
+                b.getInstallStep().dependOn(&b.addInstallFile(stdout, "share/man/man1/" ++ page ++ ".1").step);
+            }
         }
     }
 

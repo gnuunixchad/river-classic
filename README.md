@@ -27,7 +27,7 @@ layout and shifted around as windows are opened/closed.
 Rather than having the tiled layout logic built into the compositor process,
 river-classic uses a [custom Wayland
 protocol](https://codeberg.org/river/river-classic/src/branch/main/protocol/river-layout-v3.xml)
-and separate "layout generator" process. A basic layout generator, `rivertile`,
+and separate "layout generator" process. A basic layout generator, `rivercarro`,
 is provided but users are encouraged to use community-developed [layout
 generators](https://codeberg.org/river/wiki-classic/src/branch/main/pages/Community-Layouts.md)
 or write their own. Examples in C and Python may be found
@@ -84,7 +84,7 @@ An example init script with sane defaults is provided [here](example/init)
 in the example directory.
 
 For complete documentation see the `river(1)`, `riverctl(1)`, and
-`rivertile(1)` man pages.
+`rivercarro(1)` man pages.
 
 ## Donate
 
@@ -103,3 +103,5 @@ blocks).
 
 The river logo is licensed under the CC BY-SA 4.0 license, see the
 [license](logo/LICENSE) in the logo directory.
+
+rivercarro is a fork of rivertile, written by [novakane](https://git.sr.ht/~novakane/rivercarro).
