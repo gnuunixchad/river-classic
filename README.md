@@ -1,4 +1,4 @@
-# river-classic
+# My build of [river-classic](https://codeberg.org/river/river-classic)
 
 river-classic is a dynamic tiling Wayland compositor with flexible runtime
 configuration.
@@ -7,15 +7,13 @@ It is a fork of [river](https://codeberg.org/river/river) 0.3 intended for users
 that are happy with how river 0.3 works and do not wish to deal with the majorly
 breaking changes planned for the river 0.4.0 release.
 
-Join us at [#river](https://web.libera.chat/?channels=#river) on irc.libera.chat —
-Read our man pages, [wiki](https://codeberg.org/river/wiki-classic), and
-[Code of Conduct](CODE_OF_CONDUCT.md)
+## Changes I've made
+- river executable renamed to river-classic
+- rivertile replaced by rivercarro
 
-The main repository is on [codeberg](https://codeberg.org/river/river-classic),
-which is where the issue tracker may be found and where contributions are accepted.
+For more changes see the commit history.
 
-Read-only mirrors exist on [sourcehut](https://git.sr.ht/~ifreund/river-classic)
-and [github](https://github.com/riverwm/river-classic).
+My river-classic configs are available on [codeberg](https://codeberg.org/unixchad/dotfiles/src/branch/master/.config/river-classic) and [github](https://github.com/gnuunixchad/dotfiles/tree/master/.config/river-classic).
 
 ## Features
 
@@ -86,11 +84,6 @@ in the example directory.
 For complete documentation see the `river(1)`, `riverctl(1)`, and
 `rivercarro(1)` man pages.
 
-## Donate
-
-If my work on river-classic adds value to your life and you'd like to support me
-financially you can find donation information [here](https://isaacfreund.com/donate/).
-
 ## Licensing
 
 river-classic is released under the GNU General Public License v3.0 only.
@@ -105,5 +98,4 @@ The river logo is licensed under the CC BY-SA 4.0 license, see the
 [license](logo/LICENSE) in the logo directory.
 
 rivercarro is a fork of rivertile, written by
-[novakane](https://git.sr.ht/~novakane/rivercarro), licensed under the [GNU
-General Public License v3.0 or later](./LICENSE).
+[novakane](https://git.sr.ht/~novakane/rivercarro), licensed under the [GNU General Public License v3.0 or later](./LICENSE).
