@@ -104,4 +104,6 @@ blocks).
 The river logo is licensed under the CC BY-SA 4.0 license, see the
 [license](logo/LICENSE) in the logo directory.
 
-rivercarro is a fork of rivertile, written by [novakane](https://git.sr.ht/~novakane/rivercarro).
+rivercarro is a fork of rivertile, written by
+[novakane](https://git.sr.ht/~novakane/rivercarro), licensed under the [GNU
+General Public License v3.0 or later](./LICENSE).
