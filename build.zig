@@ -148,7 +148,7 @@ pub fn build(b: *Build) !void {
 
     {
         const river = b.addExecutable(.{
-            .name = "river",
+            .name = "river-classic",
             .root_module = b.createModule(.{
                 .root_source_file = b.path("river/main.zig"),
                 .target = target,
