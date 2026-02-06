@@ -1,4 +1,4 @@
-# My build of [river-classic](https://codeberg.org/river/river-classic)
+# <img src="./misc/river-classic-repo.png" width="24"/> My build of [river-classic](https://codeberg.org/river/river-classic)
 
 river-classic is a dynamic tiling Wayland compositor with flexible runtime
 configuration.
