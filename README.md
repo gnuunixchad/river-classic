@@ -9,7 +9,7 @@ breaking changes planned for the river 0.4.0 release.
 
 ## Changes I've made
 - river executable renamed to river-classic
-- rivertile replaced by rivercarro
+- rivertile replaced by [riverdeck](https://codeberg.org/unixchad/riverdeck)
 
 For more changes see the commit history.
 
