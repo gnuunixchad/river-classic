@@ -208,26 +208,26 @@ pub fn build(b: *Build) !void {
     }
 
     {
-        const rivercarro = b.addExecutable(.{
-            .name = "rivercarro",
+        const riverdeck = b.addExecutable(.{
+            .name = "riverdeck",
             .root_module = b.createModule(.{
-                .root_source_file = b.path("rivercarro/main.zig"),
+                .root_source_file = b.path("riverdeck/main.zig"),
                 .target = target,
                 .optimize = optimize,
                 .strip = strip,
             }),
         });
-        rivercarro.root_module.addOptions("build_options", options);
+        riverdeck.root_module.addOptions("build_options", options);
 
-        rivercarro.root_module.addImport("flags", flags);
-        rivercarro.root_module.addImport("wayland", wayland);
-        rivercarro.linkLibC();
-        rivercarro.linkSystemLibrary("wayland-client");
+        riverdeck.root_module.addImport("flags", flags);
+        riverdeck.root_module.addImport("wayland", wayland);
+        riverdeck.linkLibC();
+        riverdeck.linkSystemLibrary("wayland-client");
 
-        rivercarro.pie = pie;
-        rivercarro.root_module.omit_frame_pointer = omit_frame_pointer;
+        riverdeck.pie = pie;
+        riverdeck.root_module.omit_frame_pointer = omit_frame_pointer;
 
-        b.installArtifact(rivercarro);
+        b.installArtifact(riverdeck);
     }
 
     {
@@ -247,10 +247,10 @@ pub fn build(b: *Build) !void {
         b.getInstallStep().dependOn(&b.addInstallFile(pc_file, "share/pkgconfig/river-protocols.pc").step);
     }
     if (man_pages) {
-        inline for (.{ "river", "riverctl", "rivercarro" }) |page| {
-            if (mem.eql(u8, page, "rivercarro")) {
-                // doesn't need to compile the manpage for rivercarro
-                b.installFile("doc/rivercarro.1", "share/man/man1/rivercarro.1");
+        inline for (.{ "river", "riverctl", "riverdeck" }) |page| {
+            if (mem.eql(u8, page, "riverdeck")) {
+                // doesn't need to compile the manpage for riverdeck
+                b.installFile("doc/riverdeck.1", "share/man/man1/riverdeck.1");
             } else {
                 // Workaround for https://github.com/ziglang/zig/issues/16369
                 // Even passing a buffer to std.Build.Step.Run appears to be racy and occasionally deadlocks.
