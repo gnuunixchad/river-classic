@@ -30,12 +30,12 @@ const wayland = @import("wayland");
 const wl = wayland.client.wl;
 const river = wayland.client.river;
 
-const log = std.log.scoped(.rivercarro);
+const log = std.log.scoped(.riverdeck);
 
 const gpa = std.heap.c_allocator;
 
 const usage =
-    \\Usage: rivercarro [options...]
+    \\Usage: riverdeck [options...]
     \\
     \\  -h                    Print this help message and exit.
     \\  -version              Print the version number and exit.
@@ -43,7 +43,7 @@ const usage =
     \\  -per-tag              Remember configuration per tag
     \\  -width-ratio-centered Center views when used with width-ratio
     \\
-    \\  The following commands may also be sent to rivercarro at runtime
+    \\  The following commands may also be sent to riverdeck at runtime
     \\  via riverctl(1):
     \\
     \\  -inner-gaps     Set the gaps around views in pixels. (Default 6)
@@ -51,7 +51,7 @@ const usage =
     \\                  pixels. (Default 6)
     \\  -main-location  Set the initial location of the main area in the
     \\                  layout. (Default left) Can be: top, right, bottom,
-    \\                  left, monocle, deck
+    \\                  left, monocle, deck, grid
     \\  -main-count     Set the initial number of views in the main area of the
     \\                  layout. (Default 1)
     \\  -main-ratio     Set the initial ratio of main area to total layout
@@ -59,7 +59,7 @@ const usage =
     \\  -width-ratio    Set the ratio of the usable area width of the screen.
     \\                  (Default: 1.0)
     \\
-    \\  See rivercarro(1) man page for more documentation.
+    \\  See riverdeck(1) man page for more documentation.
     \\
 ;
 
@@ -81,6 +81,7 @@ const Location = enum {
     left,
     monocle,
     deck,
+    grid,
 };
 
 const Config = struct {
@@ -129,13 +130,13 @@ const Output = struct {
     }
 
     fn get_layout(output: *Output) !void {
-        output.layout = try ctx.layout_manager.?.getLayout(output.wl_output, "rivercarro");
+        output.layout = try ctx.layout_manager.?.getLayout(output.wl_output, "riverdeck");
         output.layout.setListener(*Output, layout_listener, output);
     }
 
     fn layout_listener(layout: *river.LayoutV3, event: river.LayoutV3.Event, output: *Output) void {
         switch (event) {
-            .namespace_in_use => fatal("namespace 'rivercarro' already in use.", .{}),
+            .namespace_in_use => fatal("namespace 'riverdeck' already in use.", .{}),
 
             .user_command => |ev| {
                 var it = mem.tokenizeSequence(u8, mem.span(ev.command), " ");
@@ -289,7 +290,8 @@ const Output = struct {
 
                 const only_one_view = ev.view_count == 1 or
                     active_cfg.main_location == .monocle or
-                    active_cfg.main_location == .deck;
+                    active_cfg.main_location == .deck or
+                    active_cfg.main_location == .grid;
 
                 // Don't add gaps if there is only one view.
                 if (only_one_view and cfg.smart_gaps) {
@@ -301,14 +303,14 @@ const Output = struct {
                 }
 
                 const usable_w = switch (active_cfg.main_location) {
-                    .left, .right, .monocle, .deck => @as(
+                    .left, .right, .monocle, .deck, .grid => @as(
                         u31,
                         @intFromFloat(@as(f64, @floatFromInt(ev.usable_width)) * active_cfg.width_ratio),
                     ) -| (2 *| cfg.outer_gaps),
                     .top, .bottom => @as(u31, @truncate(ev.usable_height)) -| (2 *| cfg.outer_gaps),
                 };
                 const usable_h = switch (active_cfg.main_location) {
-                    .left, .right, .monocle, .deck => @as(u31, @truncate(ev.usable_height)) -| (2 *| cfg.outer_gaps),
+                    .left, .right, .monocle, .deck, .grid => @as(u31, @truncate(ev.usable_height)) -| (2 *| cfg.outer_gaps),
                     .top, .bottom => @as(
                         u31,
                         @intFromFloat(@as(f64, @floatFromInt(ev.usable_width)) * active_cfg.width_ratio),
@@ -348,7 +350,7 @@ const Output = struct {
                         main_h_rem = usable_h % main_count;
                     }
                 } else {
-                    // standard tiling layouts
+                    // standard tiling layouts (including grid)
                     if (sec_count > 0) {
                         main_w = @as(u31, @intFromFloat(active_cfg.main_ratio * @as(f64, @floatFromInt(usable_w))));
                         main_h = usable_h / main_count;
@@ -397,6 +399,57 @@ const Output = struct {
                             width = if (sec_w > gap_offset) sec_w - gap_offset else sec_w;
                             height = sec_h;
                         }
+                    } else if (active_cfg.main_location == .grid) {
+                        // grid layout, arrange windows in a grid that fills the space evenly
+                        const n = ev.view_count;
+
+                        // try to make rows and columns as equal as possible
+                        var cols: u31 = 1;
+                        var rows: u31 = 1;
+
+                        // find the best grid configuration
+                        var best_diff: u31 = 999999;
+                        var c: u31 = 1;
+                        while (c <= n) : (c += 1) {
+                            const r_u32 = (n + c - 1) / c; // ceil division
+                            // Cast to u31 since n and c are u31, r will be <= n
+                            const r: u31 = @intCast(r_u32);
+                            const diff = if (r > c) r - c else c - r;
+                            if (diff < best_diff) {
+                                best_diff = diff;
+                                cols = c;
+                                rows = r;
+                            }
+                        }
+
+                        const cell_w = usable_w / cols;
+                        const cell_h = usable_h / rows;
+
+                        const col = i % cols;
+                        const row = i / cols;
+
+
+                        x = @as(i32, @intCast(col * cell_w));
+                        y = @as(i32, @intCast(row * cell_h));
+                        width = cell_w;
+                        height = cell_h;
+
+                        if (col == cols - 1) {
+                            width = usable_w - (col * cell_w);
+                        }
+
+                        if (row == rows - 1) {
+                            height = usable_h - (row * cell_h);
+                        }
+
+                        if (col > 0) x += @as(i32, @intCast(cfg.inner_gaps));
+                        if (row > 0) y += @as(i32, @intCast(cfg.inner_gaps));
+
+                        if (col > 0) width -|= cfg.inner_gaps;
+                        if (col < cols - 1) width -|= cfg.inner_gaps;
+
+                        if (row > 0) height -|= cfg.inner_gaps;
+                        if (row < rows - 1) height -|= cfg.inner_gaps;
                     } else {
                         // standard tiling layouts
                         if (i < main_count) {
@@ -462,6 +515,13 @@ const Output = struct {
                             height,
                             ev.serial,
                         ),
+                        .grid => layout.pushViewDimensions(
+                            x +| cfg.outer_gaps,
+                            y +| cfg.outer_gaps,
+                            width,
+                            height,
+                            ev.serial,
+                        ),
                     }
                 }
                 const layout_name = if (active_cfg.main_location == .deck) blk: {
@@ -478,6 +538,7 @@ const Output = struct {
                     .top => "top",
                     .bottom => "bottom",
                     .monocle => "monocle",
+                    .grid => "HHH",
                     // deck is handled above, so this is unreachable
                     .deck => unreachable,
                 };
