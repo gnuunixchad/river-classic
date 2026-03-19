@@ -247,7 +247,7 @@ pub fn build(b: *Build) !void {
         b.getInstallStep().dependOn(&b.addInstallFile(pc_file, "share/pkgconfig/river-protocols.pc").step);
     }
     if (man_pages) {
-        inline for (.{ "river", "riverctl", "riverdeck" }) |page| {
+        inline for (.{ "river-classic", "riverctl", "riverdeck" }) |page| {
             if (mem.eql(u8, page, "riverdeck")) {
                 // doesn't need to compile the manpage for riverdeck
                 b.installFile("doc/riverdeck.1", "share/man/man1/riverdeck.1");
