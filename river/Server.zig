@@ -22,7 +22,9 @@ const assert = std.debug.assert;
 const mem = std.mem;
 const posix = std.posix;
 const wlr = @import("wlroots");
-const wl = @import("wayland").server.wl;
+const wayland = @import("wayland");
+const wl = wayland.server.wl;
+const wp = wayland.server.wp;
 
 const c = @import("c.zig").c;
 const util = @import("util.zig");
@@ -52,6 +54,8 @@ wl_server: *wl.Server,
 sigint_source: *wl.EventSource,
 sigterm_source: *wl.EventSource,
 
+fixes: *wlr.Fixes,
+
 backend: *wlr.Backend,
 session: ?*wlr.Session,
 
@@ -65,6 +69,9 @@ shm: *wlr.Shm,
 linux_dmabuf: ?*wlr.LinuxDmabufV1 = null,
 linux_drm_syncobj_manager: ?*wlr.LinuxDrmSyncobjManagerV1 = null,
 single_pixel_buffer_manager: *wlr.SinglePixelBufferManagerV1,
+
+color_manager: ?*wlr.ColorManagerV1 = null,
+color_representation_manager: *wlr.ColorRepresentationManagerV1,
 
 viewporter: *wlr.Viewporter,
 fractional_scale_manager: *wlr.FractionalScaleManagerV1,
@@ -137,6 +144,8 @@ pub fn init(server: *Server, runtime_xwayland: bool) !void {
         .sigint_source = try loop.addSignal(*wl.Server, posix.SIG.INT, terminate, wl_server),
         .sigterm_source = try loop.addSignal(*wl.Server, posix.SIG.TERM, terminate, wl_server),
 
+        .fixes = try wlr.Fixes.create(wl_server, 1),
+
         .backend = backend,
         .session = session,
         .renderer = renderer,
@@ -147,11 +156,13 @@ pub fn init(server: *Server, runtime_xwayland: bool) !void {
         .shm = try wlr.Shm.createWithRenderer(wl_server, 2, renderer),
         .single_pixel_buffer_manager = try wlr.SinglePixelBufferManagerV1.create(wl_server),
 
+        .color_representation_manager = try wlr.ColorRepresentationManagerV1.createWithRenderer(wl_server, 1, renderer),
+
         .viewporter = try wlr.Viewporter.create(wl_server),
         .fractional_scale_manager = try wlr.FractionalScaleManagerV1.create(wl_server, 1),
         .compositor = compositor,
         .subcompositor = try wlr.Subcompositor.create(wl_server),
-        .cursor_shape_manager = try wlr.CursorShapeManagerV1.create(server.wl_server, 1),
+        .cursor_shape_manager = try wlr.CursorShapeManagerV1.create(server.wl_server, 2),
 
         .xdg_shell = try wlr.XdgShell.create(wl_server, 5),
         .xdg_decoration_manager = try wlr.XdgDecorationManagerV1.create(wl_server),
@@ -192,6 +203,23 @@ pub fn init(server: *Server, runtime_xwayland: bool) !void {
         if (drm_fd >= 0) {
             server.linux_drm_syncobj_manager = wlr.LinuxDrmSyncobjManagerV1.create(wl_server, 1, drm_fd);
         }
+    }
+
+    if (renderer.features.input_color_transform) {
+        const render_intents: []const wp.ColorManagerV1.RenderIntent = &.{.perceptual};
+        const transfer_functions = renderer.transferFunctionList();
+        defer std.c.free(transfer_functions.ptr);
+        const primaries = renderer.primariesList();
+        defer std.c.free(primaries.ptr);
+        server.color_manager = try wlr.ColorManagerV1.create(wl_server, 2, .{
+            .features = .{
+                .parametric = true,
+                .set_mastering_display_primaries = true,
+            },
+            .render_intents = render_intents,
+            .transfer_functions = transfer_functions,
+            .primaries = primaries,
+        });
     }
 
     if (build_options.xwayland and runtime_xwayland) {
@@ -306,6 +334,9 @@ fn allowlist(server: *Server, global: *const wl.Global) bool {
     if (server.linux_drm_syncobj_manager) |linux_drm_syncobj_manager| {
         if (global == linux_drm_syncobj_manager.global) return true;
     }
+    if (server.color_manager) |color_manager| {
+        if (global == color_manager.global) return true;
+    }
 
     // We must use the getInterface() approach for dynamically created globals
     // such as wl_output and wl_seat since the wl_global_create() function will
@@ -320,8 +351,10 @@ fn allowlist(server: *Server, global: *const wl.Global) bool {
     // For other globals I like the current pointer comparison approach as it
     // should catch river accidentally exposing multiple copies of e.g. wl_shm
     // with an assertion failure.
-    return global == server.shm.global or
+    return global == server.fixes.global or
+        global == server.shm.global or
         global == server.single_pixel_buffer_manager.global or
+        global == server.color_representation_manager.global or
         global == server.viewporter.global or
         global == server.fractional_scale_manager.global or
         global == server.compositor.global or
